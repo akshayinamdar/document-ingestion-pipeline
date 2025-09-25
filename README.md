@@ -1,30 +1,72 @@
 # LlamaParse Document Ingestion Pipeline
 
-A production-ready Python script for processing PDF documents using **LlamaParse** and preparing them for RAG (Retrieval-Augmented Generation) applications.
+A **modular, production-ready document ingestion pipeline** using LlamaParse that transforms PDF documents into searchable vector stores for RAG (Retrieval-Augmented Generation) applications.
 
-## 🚀 Features
+## 🚀 Key Improvements (Modular Architecture)
 
-- **No Jupyter Dependencies**: Pure Python script eliminates async/event loop issues
-- **Production Ready**: Comprehensive error handling, logging, and configuration
-- **Flexible Configuration**: Easy customization through configuration files or environment variables
-- **Complete Pipeline**: From PDF discovery to vector store creation
-- **Rich Metadata**: Detailed document metadata for enhanced retrieval
-- **Multiple Output Formats**: Vector stores, processed documents, configuration files, and reports
+The pipeline has been **completely refactored** from a single 800+ line monolithic script into a clean, modular architecture following Python best practices:
 
-## 📁 Project Structure
+### ✅ **Benefits of the New Architecture**
+
+- **🔧 Modular Design**: Each component has a single responsibility
+- **🧪 Testable**: Individual components can be unit tested
+- **🔄 Reusable**: Components can be used independently in other projects
+- **📦 Maintainable**: Clear separation of concerns, easier debugging
+- **⚡ Type-Safe**: Full type hints and dataclass configurations
+- **🔌 Extensible**: Easy to add new processors or stores
+
+## 📁 New Modular Project Structure
 
 ```
-Deutsche Börse/
-├── llamaparse_ingestion_pipeline.py  # Main pipeline script
-├── requirements.txt                   # Python dependencies
-├── pipeline_config.ini               # Configuration file
-├── docs/                             # PDF documents to process
-├── notebooks/                        # Original Jupyter notebooks (archived)
-│   ├── 01-Ingestion-Pipeline.ipynb
-│   ├── 02-Docling-RAG-Pipeline.ipynb
-│   └── 03-Ingestion-Pipeline-LlamaParse.ipynb
-└── output/                           # Generated results (created automatically)
+llamaparse_pipeline/
+├── __init__.py                      # Main package exports
+├── main.py                          # Clean entry point (< 50 lines)
+├── example_step_by_step.py          # Usage examples
+├── llamaparse_ingestion_pipeline.py # Original script (kept for reference)
+├── requirements.txt                 # Python dependencies
+├── config/
+│   ├── __init__.py
+│   └── settings.py                  # Centralized configuration
+├── utils/
+│   ├── __init__.py
+│   ├── logger.py                    # Windows-compatible logging
+│   └── helpers.py                   # Common utilities
+├── processors/
+│   ├── __init__.py
+│   ├── llamaparse_processor.py      # LlamaParse API handling
+│   └── document_converter.py        # Document conversion & chunking
+├── stores/
+│   ├── __init__.py
+│   └── vector_store.py              # Embedding & vector store management
+├── pipeline/
+│   ├── __init__.py
+│   └── ingestion_pipeline.py        # Main orchestrator
+├── docs/                            # PDF documents to process
+├── notebooks/                       # Original Jupyter notebooks (archived)
+└── output/                          # Generated results (created automatically)
 ```
+
+## 🏗️ Architecture Components
+
+### 1. **Configuration (`config/`)**
+- `PipelineConfig`: Main pipeline configuration with type safety
+- `LlamaParseConfig`: API and processing settings
+- `ChunkingConfig`: Document splitting parameters  
+- `EmbeddingConfig`: Embedding model settings
+
+### 2. **Processors (`processors/`)**
+- `LlamaParseProcessor`: Handles LlamaParse API interactions and document discovery
+- `DocumentConverter`: Converts results to LangChain format and performs intelligent chunking
+
+### 3. **Stores (`stores/`)**
+- `VectorStoreManager`: Manages embeddings and FAISS vector store operations
+
+### 4. **Pipeline (`pipeline/`)**
+- `IngestionPipeline`: Orchestrates all components with proper error handling
+
+### 5. **Utils (`utils/`)**
+- `logger.py`: Windows-compatible logging with emoji conversion
+- `helpers.py`: File operations, statistics, and reporting utilities
 
 ## 🛠️ Setup
 
@@ -57,40 +99,62 @@ mkdir -p docs
 
 ## 🚀 Usage
 
-### Basic Usage
-
-```bash
-python llamaparse_ingestion_pipeline.py
-```
-
-### Advanced Usage
-
-You can customize the pipeline by modifying the configuration in the script or using environment variables:
-
+### Simple Usage (Recommended)
 ```python
-from llamaparse_ingestion_pipeline import LlamaParseIngestionPipeline
+from pipeline import IngestionPipeline
+from config import PipelineConfig
 
-# Initialize with custom settings
-pipeline = LlamaParseIngestionPipeline(
-    api_key="your-api-key",
-    docs_folder="custom_docs",
-    base_url="https://api.cloud.eu.llamaindex.ai",  # For EU region
-    chunk_size=2000,
-    chunk_overlap=400,
-    num_workers=2
+# Create configuration
+config = PipelineConfig.create_default(
+    api_key="your-llamaparse-api-key",
+    docs_folder="docs"
 )
 
-# Run individual steps
-pipeline.discover_documents()
-pipeline.process_documents()
-pipeline.convert_to_documents()
-pipeline.chunk_documents()
-pipeline.create_vector_store()
-pipeline.test_retrieval()
-pipeline.save_pipeline_results()
-
-# Or run everything at once
+# Run complete pipeline
+pipeline = IngestionPipeline(config)
 success = pipeline.run_complete_pipeline()
+```
+
+### Command Line (Easiest)
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Set API key in main.py or as environment variable
+export LLAMA_CLOUD_API_KEY=your_api_key_here
+
+# Place PDFs in docs/ folder and run
+python main.py
+```
+
+### Advanced Usage (Step-by-Step Control)
+```python
+from config.settings import PipelineConfig
+from processors.llamaparse_processor import LlamaParseProcessor
+from processors.document_converter import DocumentConverter
+from stores.vector_store import VectorStoreManager
+
+# Initialize components
+config = PipelineConfig.create_default(api_key="your-key")
+processor = LlamaParseProcessor(config.llamaparse)
+converter = DocumentConverter(config.chunking)
+vector_manager = VectorStoreManager(config.embedding)
+
+# Process step by step
+pdf_files = processor.discover_documents("docs")
+processor.process_documents()
+documents = converter.convert_to_documents(processor.get_results())
+chunks = converter.chunk_documents(documents)
+vector_manager.create_vector_store(chunks)
+
+# Search
+results = vector_manager.similarity_search("your query", k=3)
+```
+
+### Legacy Usage (Original Script)
+```bash
+# Still available for reference
+python llamaparse_ingestion_pipeline.py
 ```
 
 ## 📊 Pipeline Steps
