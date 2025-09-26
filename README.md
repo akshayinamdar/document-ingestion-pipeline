@@ -22,6 +22,7 @@ llamaparse_pipeline/
 ├── __init__.py                      # Main package exports
 ├── main.py                          # Clean entry point (< 50 lines)
 ├── example_step_by_step.py          # Usage examples
+├── semantic_chunking_example.py     # Semantic chunking demo
 ├── llamaparse_ingestion_pipeline.py # Original script (kept for reference)
 ├── requirements.txt                 # Python dependencies
 ├── config/
@@ -42,7 +43,11 @@ llamaparse_pipeline/
 │   ├── __init__.py
 │   └── ingestion_pipeline.py        # Main orchestrator
 ├── docs/                            # PDF documents to process
-├── notebooks/                       # Original Jupyter notebooks (archived)
+├── notebooks/                       # Jupyter notebooks
+│   ├── 01-Ingestion-Pipeline.ipynb
+│   ├── 02-Docling-RAG-Pipeline.ipynb
+│   ├── 03-Ingestion-Pipeline-LlamaParse.ipynb
+│   └── 04-Semantic-Chunking-HuggingFace.ipynb  # New: Semantic chunking with HuggingFace
 └── output/                          # Generated results (created automatically)
 ```
 
@@ -56,7 +61,7 @@ llamaparse_pipeline/
 
 ### 2. **Processors (`processors/`)**
 - `LlamaParseProcessor`: Handles LlamaParse API interactions and document discovery
-- `DocumentConverter`: Converts results to LangChain format and performs intelligent chunking
+- `DocumentConverter`: Converts results to LangChain format and performs intelligent chunking (supports both traditional and semantic chunking)
 
 ### 3. **Stores (`stores/`)**
 - `VectorStoreManager`: Manages embeddings and FAISS vector store operations
@@ -185,10 +190,40 @@ The pipeline generates several output files in the `output/` directory:
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `docs_folder` | `"docs"` | Folder containing PDF documents |
-| `chunk_size` | `1500` | Maximum chunk size in characters |
-| `chunk_overlap` | `300` | Overlap between chunks |
+| `chunk_size` | `1500` | Maximum chunk size in characters (traditional chunking) |
+| `chunk_overlap` | `300` | Overlap between chunks (traditional chunking) |
+| `use_semantic_chunking` | `False` | Enable LlamaIndex semantic chunking |
+| `buffer_size` | `1` | Sentences to consider together (semantic chunking) |
+| `breakpoint_percentile_threshold` | `95` | Breakpoint sensitivity (semantic chunking) |
+| `embed_model_name` | `"sentence-transformers/all-MiniLM-L6-v2"` | HuggingFace model for semantic chunking |
 | `num_workers` | `1` | LlamaParse parallel workers |
 | `embedding_model` | `"sentence-transformers/all-MiniLM-L6-v2"` | HuggingFace embedding model |
+
+### Semantic Chunking (New Feature)
+
+Semantic chunking uses embedding similarity to find natural breakpoints between sentences, creating chunks that contain semantically related content. This often leads to better retrieval performance compared to fixed-size chunking.
+
+**Key Advantages of HuggingFace Implementation:**
+- ✅ **No API Keys Required**: Uses local models, no external API calls
+- ✅ **Consistent Embeddings**: Same model (`sentence-transformers/all-MiniLM-L6-v2`) for both chunking and vector storage
+- ✅ **Cost Effective**: No per-request charges or rate limits
+- ✅ **Privacy Friendly**: All processing done locally
+- ✅ **Seamless Integration**: Works with your existing pipeline configuration
+
+```python
+# Enable semantic chunking
+chunking_config = ChunkingConfig(
+    use_semantic_chunking=True,
+    buffer_size=1,  # Number of sentences to consider together
+    breakpoint_percentile_threshold=95,  # Higher = fewer, larger chunks
+    embed_model_name="sentence-transformers/all-MiniLM-L6-v2"  # Same as your pipeline!
+)
+```
+
+**Requirements for Semantic Chunking:**
+- Additional packages: `llama-index-core`, `llama-index-embeddings-huggingface`
+- Uses the same HuggingFace model locally (no API keys needed!)
+- Falls back to traditional chunking if requirements aren't met
 
 ### API Configuration
 

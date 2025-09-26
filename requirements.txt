@@ -7,6 +7,10 @@ langchain>=0.1.0
 langchain-community>=0.0.20
 langchain-huggingface>=0.0.3
 
+# LlamaIndex for semantic chunking
+llama-index-core>=0.10.0
+llama-index-embeddings-huggingface>=0.1.0
+
 # Vector store and embeddings
 faiss-cpu>=1.7.4
 sentence-transformers>=2.2.2

@@ -44,10 +44,17 @@ class LlamaParseConfig:
 class ChunkingConfig:
     """Configuration for document chunking."""
     
+    # Traditional chunking options
     chunk_size: int = 1500
     chunk_overlap: int = 300
     separators: List[str] = None
     keep_separator: bool = True
+    
+    # Semantic chunking options
+    use_semantic_chunking: bool = False
+    buffer_size: int = 1
+    breakpoint_percentile_threshold: int = 95
+    embed_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"  # HuggingFace default
     
     def __post_init__(self):
         if self.separators is None:
@@ -60,6 +67,8 @@ class ChunkingConfig:
                 " ",         # Words
                 ""           # Characters
             ]
+        
+        # No additional setup needed for HuggingFace embeddings
 
 
 @dataclass
@@ -137,7 +146,11 @@ class PipelineConfig:
             'chunking': {
                 'chunk_size': self.chunking.chunk_size,
                 'chunk_overlap': self.chunking.chunk_overlap,
-                'keep_separator': self.chunking.keep_separator
+                'keep_separator': self.chunking.keep_separator,
+                'use_semantic_chunking': self.chunking.use_semantic_chunking,
+                'buffer_size': self.chunking.buffer_size,
+                'breakpoint_percentile_threshold': self.chunking.breakpoint_percentile_threshold,
+                'embed_model_name': self.chunking.embed_model_name
             },
             'embedding': {
                 'model_name': self.embedding.model_name,
